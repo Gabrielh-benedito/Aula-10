@@ -1,0 +1,88 @@
+# =============================================================================
+#  AULA — Relacionamento Um para Muitos (1:N)
+#
+#  Exercicio: Um Departamento tem vários Funcionários.
+#           Cada funcionário pertence a apenas UM departamento.
+#           class Departamento com colunas: id e nome
+#           class Funcionario com colunas: id, nome, cargo, salario e departamento_id
+
+#
+#  Regra de ouro: a chave estrangeira (ForeignKey) sempre fica
+#  na tabela do lado "muitos" — neste caso, na tabela de funcionários.
+# =============================================================================
+
+from sqlalchemy import create_engine, Column, Integer, Float, String, ForeignKey
+from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+
+Base = declarative_base()
+
+class Departamento(Base):
+    __tablename__ = "departamentos"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    nome = Column(String(100), nullable=False)
+
+    funcionarios = relationship("Funcionario", back_populates="departamento")
+
+    def __init__(self, nome):
+        self.nome = nome
+
+    #Função para imprimir
+    def __repr__(self):
+        return f"Departamento: id={self.id} - nome={self.nome}"
+
+class Funcionario(Base):
+    __tablename__ = "funcionarios"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    nome = Column(String(100), nullable=False)
+    cargo = Column(String(100), nullable=False)
+    salario = Column(Float, nullable=False)
+
+    departamento_id = Column(Integer, ForeignKey("departamentos.id"))
+
+    #Relacionamento
+    departamento = relationship("Departamento", back_populates="funcionarios")
+
+    def __init__(self, nome, cargo, salario, departamento):
+        self.nome = nome
+        self.cargo = cargo
+        self.salario = salario
+        self.departamento = departamento
+
+    #Função para imprimir
+    def __repr__(self):
+        return f"Funcionarios =  id={self.id} - nome={self.nome} - cargo={self.cargo}"
+
+
+engine = create_engine("sqlite:///empresa.db")
+
+Base.metadata.create_all(engine)
+
+Session = sessionmaker(bind=engine)
+
+
+with Session() as session:
+    try:
+        #Criando os departamentos
+        ti = Departamento(nome="Tecnicos de T.I")
+        financeiro = Departamento(nome="Financeiro")
+
+        #Duas formas de associoar os funcionarios no departamento
+        # Opção 1
+        func1 = Funcionario("Pablo", "Dev Front-end", 2.00)
+        ti.funcionarios.append(func1)
+
+        # Opção 2
+        func2 = Funcionario(nome="Gustavo", cargo="Dev Back-end", salario=20.000, departamento=ti)
+        func3 = Funcionario("Ana Luiza", "Dev Full-stack", 31.00, departamento=ti)
+        func4 = Funcionario("Yasmin", "Gerente Financeiro", 12.00, departamento=financeiro)
+
+        session.add(ti)
+        session.add(financeiro)
+        session.commit()
+        print(f"Departamentos e funcionarios inseridos!")
+   
+    except Exception as erro:
+        session.rollback()
+        print(f"Ocorreu um erro {erro}")
